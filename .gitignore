@@ -3,6 +3,3 @@ node_modules/
 
 # Ignore package-lock.json (optional, but generally not recommended)
 package-lock.json
-
-# Ignore requests directory (if it contains temporary/generated files)
-requests/
