@@ -1,7 +1,10 @@
+require("dotenv").config();
+
 const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 const app = express();
+const Person = require("./models/persons");
 
 // Express json-parser
 app.use(express.json());
@@ -17,6 +20,19 @@ app.use(cors());
 morgan.token("req-body", (request, _) => {
   return JSON.stringify(request.body);
 });
+
+// Comment in Case
+// if (process.argv.length > 5) {
+//   console.log(
+//     'You must enclose your value to string if the value of argument 4 or 5 have spaces (e.g, Tony Stark - "Tony Stark")'
+//   );
+//   process.exit(1);
+// } else if (process.argv.length > 3) {
+//   console.log(process.argv.length);
+//   console.log(`arguments: arg4: ${process.argv[3]} arg5: ${process.argv[4]}`);
+// } else if (process.argv.length <= 3) {
+//   console.log(`argumemts: ${process.argv[2]}`);
+// }
 
 let phonebook = [
   {
@@ -48,21 +64,27 @@ app.get("/", (request, response) => {
 
 // ROUTE TO GET ALL PHONEBOOK
 app.get("/api/persons", (request, response) => {
-  response.send(phonebook);
+  // response.send(phonebook);
+  Person.find({}).then((result) => {
+    response.json(result);
+  });
 });
 
 // ROUTE TO GET SPECIFIC PHONEBOOK
 app.get("/api/persons/:id", (request, response) => {
-  const id = request.params.id;
-  const specificPhone = phonebook.find((phone) => phone.id === id);
+  // const id = request.params.id;
+  // const specificPhone = phonebook.find((phone) => phone.id === id);
 
-  if (!specificPhone) {
-    response
-      .status(404)
-      .send("Your specified Phonebook is missing or not found");
-  } else {
-    response.json(specificPhone);
-  }
+  // if (!specificPhone) {
+  //   response
+  //     .status(404)
+  //     .send("Your specified Phonebook is missing or not found");
+  // } else {
+  //   response.json(specificPhone);
+  // }
+  Person.findById(request.params.id).then((result) => {
+    response.json(result);
+  });
 });
 
 // DELETE ROUTE
@@ -73,11 +95,11 @@ app.delete("/api/persons/:id", (request, response) => {
   response.status(204).send(phonebook).end();
 });
 
-// GENERATE ID
-const generateId = () => {
-  const id = Math.floor(Math.random() * 1000 + 1);
-  return id;
-};
+// // GENERATE ID
+// const generateId = () => {
+//   const id = Math.floor(Math.random() * 1000 + 1);
+//   return id;
+// };
 
 // CREATE/POST ROUTE
 app.post("/api/persons", (request, response) => {
@@ -90,25 +112,35 @@ app.post("/api/persons", (request, response) => {
     });
   }
 
-  const found = phonebook.find(
-    (phone) => phone.name.toLowerCase() === body.name.toLowerCase()
-  );
+  const persons = new Person({
+    name: body.name,
+    number: body.number,
+  });
 
-  if (found) {
-    response.json({ error: "Name Already Exist on the phonebook" });
-  } else if (body.name === "" || body.number === "") {
-    response.json({ error: "Missing number or name" });
-  } else {
-    const phone = {
-      id: String(generateId()),
-      name: body.name,
-      number: body.number,
-    };
+  persons.save().then((savedPerson) => {
+    response.json(savedPerson);
+  });
 
-    phonebook = phonebook.concat(phone);
+  // Comment in case
+  // const found = phonebook.find(
+  //   (phone) => phone.name.toLowerCase() === body.name.toLowerCase()
+  // );
 
-    response.json(phonebook);
-  }
+  // if (found) {
+  //   response.json({ error: "Name Already Exist on the phonebook" });
+  // } else if (body.name === "" || body.number === "") {
+  //   response.json({ error: "Missing number or name" });
+  // } else {
+  //   const phone = {
+  //     id: String(generateId()),
+  //     name: body.name,
+  //     number: body.number,
+  //   };
+
+  //   phonebook = phonebook.concat(phone);
+
+  //   response.json(phonebook);
+  // }
 });
 
 // INFO ROUTE
@@ -133,7 +165,7 @@ app.get("/info", (request, response) => {
 });
 
 // PORT
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}/`);
 });
