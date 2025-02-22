@@ -87,7 +87,7 @@ app.put("/api/persons/:id", (request, response, next) => {
     throw error;
   } else if (!/^\d{2,3}-\d{7,8}$/.test(number)) {
     const error = new Error(
-      `Your number ${number} is an Invalid number format. Please use the format 000-0000000`
+      `Invalid number format. Please use the format 000-0000000 or 000-00000000`
     );
     error.name = "ValidationError";
     throw error;
@@ -134,7 +134,6 @@ app.use(unknownEndpoint);
 
 // Middleware for error handling
 const errorHandler = (error, request, response, next) => {
-  console.log("🚀 ~ errorHandler ~ error:", error.message, error.name);
   const errorMessage = error.message;
 
   if (error.name === "CastError") {
