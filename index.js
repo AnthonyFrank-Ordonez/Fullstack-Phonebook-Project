@@ -79,14 +79,25 @@ app.post("/api/persons", (request, response, next) => {
 
 // PUT ROUTE
 app.put("/api/persons/:id", (request, response, next) => {
-  const body = request.body;
+  const { name, number } = request.body;
 
-  const person = {
-    name: body.name,
-    number: body.number,
-  };
+  if (!name || !number) {
+    const error = new Error("Missing name or number");
+    error.name = "ValidationError";
+    throw error;
+  } else if (!/^\d{2,3}-\d{7,8}$/.test(number)) {
+    const error = new Error(
+      `Your number ${number} is an Invalid number format. Please use the format 000-0000000`
+    );
+    error.name = "ValidationError";
+    throw error;
+  }
 
-  Person.findByIdAndUpdate(request.params.id, person, { new: true })
+  Person.findByIdAndUpdate(
+    request.params.id,
+    { name, number },
+    { new: true, runValidators: true, context: "query" }
+  )
     .then((updatedPerson) => {
       response.json(updatedPerson);
     })
