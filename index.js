@@ -89,10 +89,17 @@ app.get("/api/persons/:id", (request, response) => {
 
 // DELETE ROUTE
 app.delete("/api/persons/:id", (request, response) => {
-  const id = request.params.id;
-  phonebook = phonebook.filter((phone) => phone.id !== id);
+  // const id = request.params.id;
+  // phonebook = phonebook.filter((phone) => phone.id !== id);
 
-  response.status(204).send(phonebook).end();
+  // response.status(204).send(phonebook).end();
+  Person.findByIdAndDelete(request.params.id)
+    .then((result) => {
+      response.status(204).end();
+    })
+    .catch((error) => {
+      next(error);
+    });
 });
 
 // // GENERATE ID
