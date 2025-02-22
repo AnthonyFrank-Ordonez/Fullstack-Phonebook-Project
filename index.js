@@ -21,29 +21,6 @@ morgan.token("req-body", (request, _) => {
   return JSON.stringify(request.body);
 });
 
-let phonebook = [
-  {
-    id: "1",
-    name: "Arto Hellas",
-    number: "040-123456",
-  },
-  {
-    id: "2",
-    name: "Ada Lovelace",
-    number: "39-44-5323523",
-  },
-  {
-    id: "3",
-    name: "Dan Abramov",
-    number: "12-43-234345",
-  },
-  {
-    id: "4",
-    name: "Mary Poppendieck",
-    number: "39-23-6423122",
-  },
-];
-
 // ROUTE FOR HOME
 app.get("/", (request, response) => {
   response.send("<h1>Testing</h1>");
@@ -84,28 +61,24 @@ app.delete("/api/persons/:id", (request, response, next) => {
 });
 
 // CREATE/POST ROUTE
-app.post("/api/persons", (request, response) => {
+app.post("/api/persons", (request, response, next) => {
   const body = request.body;
-
-  // Error handling if the name oor phone is missing
-  if (!body.name || !body.number) {
-    return response.json({
-      error: "Missing Body Contents (e.g. name, number)",
-    });
-  }
 
   const persons = new Person({
     name: body.name,
     number: body.number,
   });
 
-  persons.save().then((savedPerson) => {
-    response.json(savedPerson);
-  });
+  persons
+    .save()
+    .then((savedPerson) => {
+      response.json(savedPerson);
+    })
+    .catch((error) => next(error));
 });
 
 // PUT ROUTE
-app.put("api/persons/:id", (request, params, next) => {
+app.put("/api/persons/:id", (request, response, next) => {
   const body = request.body;
 
   const person = {
@@ -118,6 +91,27 @@ app.put("api/persons/:id", (request, params, next) => {
       response.json(updatedPerson);
     })
     .catch((error) => next(error));
+});
+
+// INFO ROUTE
+app.get("/info", async (request, response) => {
+  const date = new Date().toLocaleString("en-PH", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour12: false,
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    timeZoneName: "long",
+    timeZone: "Asia/Manila",
+  });
+  const phonebookLength = await Person.countDocuments({});
+  response.send(
+    `<p>Phonebook has info for ${phonebookLength} people</p>
+     <p>${date}</p>`
+  );
 });
 
 // Middleware for unknown endpoint
@@ -136,33 +130,14 @@ const errorHandler = (error, request, response, next) => {
     return response.status(400).send({ error: "Malformatted id" });
   } else if (error.name === "NotFoundError") {
     return response.status(404).send({ error: "Id Not Found" });
+  } else if (error.name === "ValidationError") {
+    return response.status(400).send({ error: error.message });
   }
 
   next(error);
 };
 
 app.use(errorHandler);
-
-// INFO ROUTE
-app.get("/info", (request, response) => {
-  const date = new Date().toLocaleString("en-PH", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour12: false,
-    hour: "numeric",
-    minute: "numeric",
-    second: "numeric",
-    timeZoneName: "long",
-    timeZone: "Asia/Manila",
-  });
-  const phoneBookLength = phonebook.length;
-  response.send(
-    `<p>Phonebook has info for ${phoneBookLength} people</p>
-     <p>${date}</p>`
-  );
-});
 
 // PORT
 const PORT = process.env.PORT;
@@ -231,4 +206,29 @@ if (found) {
 
   response.json(phonebook);
 }
+
+
+// let phonebook = [
+//   {
+//     id: "1",
+//     name: "Arto Hellas",
+//     number: "040-123456",
+//   },
+//   {
+//     id: "2",
+//     name: "Ada Lovelace",
+//     number: "39-44-5323523",
+//   },
+//   {
+//     id: "3",
+//     name: "Dan Abramov",
+//     number: "12-43-234345",
+//   },
+//   {
+//     id: "4",
+//     name: "Mary Poppendieck",
+//     number: "39-23-6423122",
+//   },
+// ];
+
 */
