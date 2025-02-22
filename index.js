@@ -21,19 +21,6 @@ morgan.token("req-body", (request, _) => {
   return JSON.stringify(request.body);
 });
 
-// Comment in Case
-// if (process.argv.length > 5) {
-//   console.log(
-//     'You must enclose your value to string if the value of argument 4 or 5 have spaces (e.g, Tony Stark - "Tony Stark")'
-//   );
-//   process.exit(1);
-// } else if (process.argv.length > 3) {
-//   console.log(process.argv.length);
-//   console.log(`arguments: arg4: ${process.argv[3]} arg5: ${process.argv[4]}`);
-// } else if (process.argv.length <= 3) {
-//   console.log(`argumemts: ${process.argv[2]}`);
-// }
-
 let phonebook = [
   {
     id: "1",
@@ -64,49 +51,37 @@ app.get("/", (request, response) => {
 
 // ROUTE TO GET ALL PHONEBOOK
 app.get("/api/persons", (request, response) => {
-  // response.send(phonebook);
   Person.find({}).then((result) => {
     response.json(result);
   });
 });
 
 // ROUTE TO GET SPECIFIC PHONEBOOK
-app.get("/api/persons/:id", (request, response) => {
-  // const id = request.params.id;
-  // const specificPhone = phonebook.find((phone) => phone.id === id);
-
-  // if (!specificPhone) {
-  //   response
-  //     .status(404)
-  //     .send("Your specified Phonebook is missing or not found");
-  // } else {
-  //   response.json(specificPhone);
-  // }
-  Person.findById(request.params.id).then((result) => {
-    response.json(result);
-  });
+app.get("/api/persons/:id", (request, response, next) => {
+  Person.findById(request.params.id)
+    .then((result) => {
+      if (result) response.json(result);
+      else response.status(404).end();
+    })
+    .catch((error) => next(error));
 });
 
 // DELETE ROUTE
-app.delete("/api/persons/:id", (request, response) => {
-  // const id = request.params.id;
-  // phonebook = phonebook.filter((phone) => phone.id !== id);
-
-  // response.status(204).send(phonebook).end();
+app.delete("/api/persons/:id", (request, response, next) => {
   Person.findByIdAndDelete(request.params.id)
     .then((result) => {
-      response.status(204).end();
+      if (result) {
+        response.status(204).end();
+      } else {
+        const error = new Error("ID not Found");
+        error.name = "NotFoundError";
+        throw error;
+      }
     })
     .catch((error) => {
       next(error);
     });
 });
-
-// // GENERATE ID
-// const generateId = () => {
-//   const id = Math.floor(Math.random() * 1000 + 1);
-//   return id;
-// };
 
 // CREATE/POST ROUTE
 app.post("/api/persons", (request, response) => {
@@ -127,28 +102,46 @@ app.post("/api/persons", (request, response) => {
   persons.save().then((savedPerson) => {
     response.json(savedPerson);
   });
-
-  // Comment in case
-  // const found = phonebook.find(
-  //   (phone) => phone.name.toLowerCase() === body.name.toLowerCase()
-  // );
-
-  // if (found) {
-  //   response.json({ error: "Name Already Exist on the phonebook" });
-  // } else if (body.name === "" || body.number === "") {
-  //   response.json({ error: "Missing number or name" });
-  // } else {
-  //   const phone = {
-  //     id: String(generateId()),
-  //     name: body.name,
-  //     number: body.number,
-  //   };
-
-  //   phonebook = phonebook.concat(phone);
-
-  //   response.json(phonebook);
-  // }
 });
+
+// PUT ROUTE
+app.put("api/persons/:id", (request, params, next) => {
+  const body = request.body;
+
+  const person = {
+    name: body.name,
+    number: body.number,
+  };
+
+  Person.findByIdAndUpdate(request.params.id, person, { new: true })
+    .then((updatedPerson) => {
+      response.json(updatedPerson);
+    })
+    .catch((error) => next(error));
+});
+
+// Middleware for unknown endpoint
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({ error: "Unknown Endpoint" });
+};
+
+app.use(unknownEndpoint);
+
+// Middleware for error handling
+const errorHandler = (error, request, response, next) => {
+  console.log("🚀 ~ errorHandler ~ error:", error.message, error.name);
+  const errorMessage = error.message;
+
+  if (error.name === "CastError") {
+    return response.status(400).send({ error: "Malformatted id" });
+  } else if (error.name === "NotFoundError") {
+    return response.status(404).send({ error: "Id Not Found" });
+  }
+
+  next(error);
+};
+
+app.use(errorHandler);
 
 // INFO ROUTE
 app.get("/info", (request, response) => {
@@ -176,3 +169,66 @@ const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}/`);
 });
+
+/*
+=================================================================
+REFERENCE CODE (Previous Implementations)
+=================================================================
+
+// Process Arguments Check
+if (process.argv.length > 5) {
+  console.log(
+    'You must enclose your value to string if the value of argument 4 or 5 have spaces (e.g, Tony Stark - "Tony Stark")'
+  );
+  process.exit(1);
+} else if (process.argv.length > 3) {
+  console.log(process.argv.length);
+  console.log(`arguments: arg4: ${process.argv[3]} arg5: ${process.argv[4]}`);
+} else if (process.argv.length <= 3) {
+  console.log(`argumemts: ${process.argv[2]}`);
+}
+
+// Previous GET specific phonebook implementation
+const id = request.params.id;
+const specificPhone = phonebook.find((phone) => phone.id === id);
+
+if (!specificPhone) {
+  response
+    .status(404)
+    .send("Your specified Phonebook is missing or not found");
+} else {
+  response.json(specificPhone);
+}
+
+// Previous DELETE implementation
+const id = request.params.id;
+phonebook = phonebook.filter((phone) => phone.id !== id);
+response.status(204).send(phonebook).end();
+
+// Previous ID generator
+const generateId = () => {
+  const id = Math.floor(Math.random() * 1000 + 1);
+  return id;
+};
+
+// Previous POST implementation
+const found = phonebook.find(
+  (phone) => phone.name.toLowerCase() === body.name.toLowerCase()
+);
+
+if (found) {
+  response.json({ error: "Name Already Exist on the phonebook" });
+} else if (body.name === "" || body.number === "") {
+  response.json({ error: "Missing number or name" });
+} else {
+  const phone = {
+    id: String(generateId()),
+    name: body.name,
+    number: body.number,
+  };
+
+  phonebook = phonebook.concat(phone);
+
+  response.json(phonebook);
+}
+*/
