@@ -1,159 +1,158 @@
-require("dotenv").config();
+require('dotenv').config()
 
-const express = require("express");
-const morgan = require("morgan");
-const cors = require("cors");
-const app = express();
-const Person = require("./models/persons");
+const express = require('express')
+const morgan = require('morgan')
+const cors = require('cors')
+const app = express()
+const Person = require('./models/persons')
 
 // Express json-parser
-app.use(express.json());
-app.use(express.static("dist"));
+app.use(express.json())
+app.use(express.static('dist'))
 app.use(
   morgan(
-    ":method :url :status :res[content-length] - :response-time ms :req-body"
+    ':method :url :status :res[content-length] - :response-time ms :req-body'
   )
-);
-app.use(cors());
+)
+app.use(cors())
 
 // create custom token for morgan for response body
-morgan.token("req-body", (request, _) => {
-  return JSON.stringify(request.body);
-});
+morgan.token('req-body', (request) => {
+  return JSON.stringify(request.body)
+})
 
 // ROUTE FOR HOME
-app.get("/", (request, response) => {
-  response.send("<h1>Testing</h1>");
-});
+app.get('/', (request, response) => {
+  response.send('<h1>Testing</h1>')
+})
 
 // ROUTE TO GET ALL PHONEBOOK
-app.get("/api/persons", (request, response) => {
+app.get('/api/persons', (request, response) => {
   Person.find({}).then((result) => {
-    response.json(result);
-  });
-});
+    response.json(result)
+  })
+})
 
 // ROUTE TO GET SPECIFIC PHONEBOOK
-app.get("/api/persons/:id", (request, response, next) => {
+app.get('/api/persons/:id', (request, response, next) => {
   Person.findById(request.params.id)
     .then((result) => {
-      if (result) response.json(result);
-      else response.status(404).end();
+      if (result) response.json(result)
+      else response.status(404).end()
     })
-    .catch((error) => next(error));
-});
+    .catch((error) => next(error))
+})
 
 // DELETE ROUTE
-app.delete("/api/persons/:id", (request, response, next) => {
+app.delete('/api/persons/:id', (request, response, next) => {
   Person.findByIdAndDelete(request.params.id)
     .then((result) => {
       if (result) {
-        response.status(204).end();
+        response.status(204).end()
       } else {
-        const error = new Error("ID not Found");
-        error.name = "NotFoundError";
-        throw error;
+        const error = new Error('ID not Found')
+        error.name = 'NotFoundError'
+        throw error
       }
     })
     .catch((error) => {
-      next(error);
-    });
-});
+      next(error)
+    })
+})
 
 // CREATE/POST ROUTE
-app.post("/api/persons", (request, response, next) => {
-  const body = request.body;
+app.post('/api/persons', (request, response, next) => {
+  const body = request.body
 
   const persons = new Person({
     name: body.name,
     number: body.number,
-  });
+  })
 
   persons
     .save()
     .then((savedPerson) => {
-      response.json(savedPerson);
+      response.json(savedPerson)
     })
-    .catch((error) => next(error));
-});
+    .catch((error) => next(error))
+})
 
 // PUT ROUTE
-app.put("/api/persons/:id", (request, response, next) => {
-  const { name, number } = request.body;
+app.put('/api/persons/:id', (request, response, next) => {
+  const { name, number } = request.body
 
   if (!name || !number) {
-    const error = new Error("Missing name or number");
-    error.name = "ValidationError";
-    throw error;
+    const error = new Error('Missing name or number')
+    error.name = 'ValidationError'
+    throw error
   } else if (!/^\d{2,3}-\d{7,8}$/.test(number)) {
     const error = new Error(
-      `Invalid number format. Please use the format 000-0000000 or 000-00000000`
-    );
-    error.name = "ValidationError";
-    throw error;
+      'Invalid number format. Please use the format 000-0000000 or 000-00000000'
+    )
+    error.name = 'ValidationError'
+    throw error
   }
 
   Person.findByIdAndUpdate(
     request.params.id,
     { name, number },
-    { new: true, runValidators: true, context: "query" }
+    { new: true, runValidators: true, context: 'query' }
   )
     .then((updatedPerson) => {
-      response.json(updatedPerson);
+      response.json(updatedPerson)
     })
-    .catch((error) => next(error));
-});
+    .catch((error) => next(error))
+})
 
 // INFO ROUTE
-app.get("/info", async (request, response) => {
-  const date = new Date().toLocaleString("en-PH", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
+app.get('/info', async (request, response) => {
+  const date = new Date().toLocaleString('en-PH', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
     hour12: false,
-    hour: "numeric",
-    minute: "numeric",
-    second: "numeric",
-    timeZoneName: "long",
-    timeZone: "Asia/Manila",
-  });
-  const phonebookLength = await Person.countDocuments({});
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    timeZoneName: 'long',
+    timeZone: 'Asia/Manila',
+  })
+  const phonebookLength = await Person.countDocuments({})
   response.send(
     `<p>Phonebook has info for ${phonebookLength} people</p>
      <p>${date}</p>`
-  );
-});
+  )
+})
 
 // Middleware for unknown endpoint
 const unknownEndpoint = (request, response) => {
-  response.status(404).send({ error: "Unknown Endpoint" });
-};
+  response.status(404).send({ error: 'Unknown Endpoint' })
+}
 
-app.use(unknownEndpoint);
+app.use(unknownEndpoint)
 
 // Middleware for error handling
 const errorHandler = (error, request, response, next) => {
-  const errorMessage = error.message;
 
-  if (error.name === "CastError") {
-    return response.status(400).send({ error: "Malformatted id" });
-  } else if (error.name === "NotFoundError") {
-    return response.status(404).send({ error: "Id Not Found" });
-  } else if (error.name === "ValidationError") {
-    return response.status(400).send({ error: error.message });
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'Malformatted id' })
+  } else if (error.name === 'NotFoundError') {
+    return response.status(404).send({ error: 'Id Not Found' })
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).send({ error: error.message })
   }
 
-  next(error);
-};
+  next(error)
+}
 
-app.use(errorHandler);
+app.use(errorHandler)
 
 // PORT
-const PORT = process.env.PORT;
+const PORT = process.env.PORT
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}/`);
-});
+  console.log(`Server running on http://localhost:${PORT}/`)
+})
 
 /*
 =================================================================
